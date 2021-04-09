@@ -20,12 +20,12 @@ namespace WOLtool
                     sock.SendTo(magicPacket, new IPEndPoint(IPAddress.Broadcast, 9)); // Transmit Magic Packet on Port 9
                     sock.Close(); // Close socket
                 }
-                Console.WriteLine("Success!");
+                Console.WriteLine($"({macParam}) Success!");
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine($"({macParam}) Failed!\n{ex}");
                 return -1;
             }
         }
@@ -58,7 +58,7 @@ namespace WOLtool
             }
             catch
             {
-                Console.WriteLine("Error building magic packet. Please verify MAC Address is entered correctly.");
+                Console.WriteLine($"({macParam}) Error building magic packet. Please verify MAC Address is entered correctly.");
                 throw;
             }
         }
