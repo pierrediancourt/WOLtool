@@ -6,20 +6,14 @@ namespace WOLtool
     {
         static int Main(string[] args)
         {
-            if (args.Length == 0) // No args provided, get user input
+            if (args.Length == 0) // No args provided, get console input
             {
                 Console.Write("Enter MAC Address: ");
-                string mac = Console.ReadLine().Trim();
-                return WOL.Send(mac);
+                return WOL.Send(Console.ReadLine().Trim());
             }
-            else if (args.Length == 1) // arg1 = MAC Address
+            else // Args provided
             {
-                return WOL.Send(args[0]);
-            }
-            else // Handle unexpected startup
-            {
-                Console.WriteLine("Unexpected arguments.");
-                return -1;
+                return WOL.Send(args[0]); // First arg should be MAC Address
             }
         }
     }

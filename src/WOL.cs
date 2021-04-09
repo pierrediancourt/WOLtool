@@ -8,19 +8,16 @@ namespace WOLtool
 {
     internal static class WOL
     {
-        public static int Send(string macaddress)
+        public static int Send(string macParam)
         {
             try
             {
                 using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)) // Create socket
                 {
-                    sock.EnableBroadcast = true; // Enable broadcast, required for macOS compatibility 
-                    IPEndPoint ep1 = new IPEndPoint(IPAddress.Broadcast, 7); // Port 7 common WOL port
-                    IPEndPoint ep2 = new IPEndPoint(IPAddress.Broadcast, 9); // Port 9 common WOL port
-                    byte[] mp = BuildMagicPacket(macaddress); // Get magic packet byte array based on MAC Address
-                    if (mp == null) throw new NullReferenceException("Magic Packet value is null. Please verify MAC Address is entered/formatted correctly.");
-                    sock.SendTo(mp, ep1); // Transmit Magic Packet on Port 7
-                    sock.SendTo(mp, ep2); // Transmit Magic Packet on Port 9
+                    sock.EnableBroadcast = true; // Enable broadcast, required for macOS compatibility
+                    byte[] magicPacket = BuildMagicPacket(macParam); // Get magic packet byte array based on MAC Address
+                    sock.SendTo(magicPacket, new IPEndPoint(IPAddress.Broadcast, 7)); // Transmit Magic Packet on Port 7
+                    sock.SendTo(magicPacket, new IPEndPoint(IPAddress.Broadcast, 9)); // Transmit Magic Packet on Port 9
                     sock.Close(); // Close socket
                 }
                 Console.WriteLine("Success!");
@@ -32,15 +29,15 @@ namespace WOLtool
                 return -1;
             }
         }
-        private static byte[] BuildMagicPacket(string macaddress) // MacAddress in any standard HEX format
+        private static byte[] BuildMagicPacket(string macParam) // MacAddress in any standard HEX format
         {
             try
             {
-                macaddress = Regex.Replace(macaddress, "[: -]", "");
+                macParam = Regex.Replace(macParam, "[. : -]", ""); // Remove chars . - : from string (common in mac address format)
                 byte[] macBytes = new byte[6];
                 for (int i = 0; i < 6; i++)
                 {
-                    macBytes[i] = Convert.ToByte(macaddress.Substring(i * 2, 2), 16);
+                    macBytes[i] = Convert.ToByte(macParam.Substring(i * 2, 2), 16);
                 }
 
                 using (MemoryStream ms = new MemoryStream())
@@ -61,7 +58,8 @@ namespace WOLtool
             }
             catch
             {
-                return null;
+                Console.WriteLine("Error building magic packet. Please verify MAC Address is entered correctly.");
+                throw;
             }
         }
     }
