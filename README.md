@@ -5,9 +5,9 @@
 
 1) Make sure the remote computer has Wake-On-Lan enabled in the System BIOS, and the remote network adapter supports WOL and has it enabled.
 2) Startup WOLtool, provide MAC Address of the remote computer's network card.
-   - Be sure you have the [.NET Core 3.1](https://dotnet.microsoft.com/download) or newer runtime installed.
+   - Be sure you have the [.NET5](https://dotnet.microsoft.com/download) or newer runtime installed.
    - *(Optional)* You can run WOLtool from the command line: ```woltool <MacAddress1> <MacAddress2> <MacAddress3>...``` Multiple MAC Addresses are supported.
-3) If Magic Packet broadcast is successful, you will receive a 'Success' message. As long as the remote computer is properly configured, it should wake ([See Considerations](https://github.com/imerzan/WOLtool#considerations)).
+3) If Magic Packet broadcast is successful, you will receive a 'OK' message. As long as the remote computer is properly configured, it should wake ([See Considerations](https://github.com/imerzan/WOLtool#considerations)).
 
 **NOTE:** To run on a macOS/Linux system you will need to run this from terminal/bash. Be sure you set the file permissions for WOLtool to be executable via terminal:
 ```bash
