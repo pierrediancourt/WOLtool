@@ -6,28 +6,41 @@ using System.IO;
 
 namespace WOLtool
 {
-    internal static class WOL
+    public class WOL
     {
-        public static int Send(string macParam)
+        private readonly Socket _sock;
+        private static readonly IPEndPoint[] _endpoints = new IPEndPoint[]
+        {
+            new IPEndPoint(IPAddress.Broadcast, 7), // Common WOL Port
+            new IPEndPoint(IPAddress.Broadcast, 9) // Common WOL Port
+        };
+        public WOL()
+        {
+            _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            _sock.EnableBroadcast = true; // Enable broadcast, required for macOS compatibility
+        }
+        public int Send(string macParam)
         {
             try
             {
-                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)) // Create socket
+                byte[] magicPacket = BuildMagicPacket(macParam); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Send to all WOL Endpoints
                 {
-                    sock.EnableBroadcast = true; // Enable broadcast, required for macOS compatibility
-                    byte[] magicPacket = BuildMagicPacket(macParam); // Get magic packet byte array based on MAC Address
-                    sock.SendTo(magicPacket, new IPEndPoint(IPAddress.Broadcast, 7)); // Transmit Magic Packet on Port 7
-                    sock.SendTo(magicPacket, new IPEndPoint(IPAddress.Broadcast, 9)); // Transmit Magic Packet on Port 9
-                    sock.Close(); // Close socket
+                    _sock.SendTo(magicPacket, ep); // Transmit magic packet
                 }
-                Console.WriteLine($"({macParam}) Success!");
+                Console.WriteLine($"{macParam} OK");
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"({macParam}) Failed!\n{ex}");
+                Console.WriteLine($"{macParam} FAIL: {ex}");
                 return -1;
             }
+        }
+
+        public void Close() // Call to dispose socket when done
+        {
+            _sock?.Dispose();
         }
         private static byte[] BuildMagicPacket(string macParam) // MacAddress in any standard HEX format
         {
@@ -56,10 +69,9 @@ namespace WOLtool
                     return ms.ToArray(); // return 102 bytes magic packet
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                Console.WriteLine($"({macParam}) Error building magic packet. Please verify MAC Address is entered correctly.");
-                throw;
+                throw new Exception($"Error building magic packet. Please verify MAC Address is entered correctly: {ex}");
             }
         }
     }
