@@ -6,8 +6,9 @@ using System.IO;
 
 namespace WOLtool
 {
-    public class WOL
+    public class WOL : IDisposable
     {
+        private bool _disposed = false;
         private readonly Socket _sock;
         private static readonly IPEndPoint[] _endpoints = new IPEndPoint[]
         {
@@ -16,9 +17,12 @@ namespace WOLtool
         };
         public WOL()
         {
-            _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            _sock.EnableBroadcast = true; // Enable broadcast, required for macOS compatibility
+            _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+            {
+                EnableBroadcast = true // Enable broadcast, required for macOS compatibility
+            };
         }
+
         public int Send(string macParam)
         {
             try
@@ -28,19 +32,14 @@ namespace WOLtool
                 {
                     _sock.SendTo(magicPacket, ep); // Transmit magic packet
                 }
-                Console.WriteLine($"{macParam} OK");
+                Console.WriteLine($"{macParam} [OK]");
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{macParam} FAIL: {ex}");
+                Console.WriteLine($"{macParam} [FAIL] {ex}");
                 return -1;
             }
-        }
-
-        public void Close() // Call to dispose socket when done
-        {
-            _sock?.Dispose();
         }
         private static byte[] BuildMagicPacket(string macParam) // MacAddress in any standard HEX format
         {
@@ -73,6 +72,26 @@ namespace WOLtool
             {
                 throw new Exception($"Error building magic packet. Please verify MAC Address is entered correctly: {ex}");
             }
+        }
+
+        // Public implementation of Dispose pattern callable by consumers.
+        public void Dispose() => Dispose(true);
+
+        // Protected implementation of Dispose pattern.
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                // Dispose managed state (managed objects).
+                _sock?.Dispose();
+            }
+
+            _disposed = true;
         }
     }
 }
