@@ -3,12 +3,13 @@ using System.Net;
 using System.Net.Sockets;
 using System.IO;
 using System.Net.NetworkInformation;
+using System.Threading.Tasks;
 
 namespace WOLtool
 {
     public class WakeOnLan : IDisposable
     {
-        private readonly Socket _sock;
+        private readonly UdpClient _client;
         private static readonly IPEndPoint[] _endpoints = new IPEndPoint[]
         {
             new IPEndPoint(IPAddress.Broadcast, 7), // echo
@@ -17,7 +18,7 @@ namespace WOLtool
 
         public WakeOnLan()
         {
-            _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
+            _client = new UdpClient(AddressFamily.InterNetwork)
             {
                 EnableBroadcast = true // Enable broadcast, required for macOS compatibility
             };
@@ -31,7 +32,7 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    _sock.SendTo(magicPacket, ep); // Broadcast magic packet
+                    _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
                 }
             }
             catch (Exception ex)
@@ -46,7 +47,39 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    _sock.SendTo(magicPacket, ep); // Broadcast magic packet
+                    _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new WakeOnLanException("ERROR broadcasting WakeOnLan Magic Packet.", ex);
+            }
+        }
+
+        public async Task SendAsync(string macAddress)
+        {
+            try
+            {
+                var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
+                byte[] magicPacket = await Task.Run(() => BuildMagicPacket(macParse)).ConfigureAwait(false); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                {
+                    await _client.SendAsync(magicPacket, magicPacket.Length, ep).ConfigureAwait(false); // Broadcast magic packet
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new WakeOnLanException("ERROR broadcasting WakeOnLan Magic Packet.", ex);
+            }
+        }
+        public async Task SendAsync(PhysicalAddress macAddress)
+        {
+            try
+            {
+                byte[] magicPacket = await Task.Run(() => BuildMagicPacket(macAddress)).ConfigureAwait(false); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                {
+                    await _client.SendAsync(magicPacket, magicPacket.Length, ep).ConfigureAwait(false); // Broadcast magic packet
                 }
             }
             catch (Exception ex)
@@ -88,7 +121,7 @@ namespace WOLtool
             if (disposing)
             {
                 // Dispose managed state (managed objects).
-                _sock?.Dispose();
+                _client?.Dispose();
             }
 
             _disposed = true;
