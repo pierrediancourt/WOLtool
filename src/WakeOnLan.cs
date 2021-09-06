@@ -32,7 +32,10 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                    lock (_client) // Obtain lock for thread safety
+                    {
+                        _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                    }
                 }
             }
             catch (Exception ex)
@@ -47,7 +50,10 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                    lock (_client) // Obtain lock for thread safety
+                    {
+                        _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                    }
                 }
             }
             catch (Exception ex)
@@ -60,12 +66,18 @@ namespace WOLtool
         {
             try
             {
-                var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
-                byte[] magicPacket = await Task.Run(() => BuildMagicPacket(macParse)).ConfigureAwait(false); // Get magic packet byte array based on MAC Address
-                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                await Task.Run(() =>
                 {
-                    await _client.SendAsync(magicPacket, magicPacket.Length, ep).ConfigureAwait(false); // Broadcast magic packet
-                }
+                    var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
+                    byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
+                    foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                    {
+                        lock (_client) // Obtain lock for thread safety
+                        {
+                            _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                        }
+                    }
+                }).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -76,11 +88,17 @@ namespace WOLtool
         {
             try
             {
-                byte[] magicPacket = await Task.Run(() => BuildMagicPacket(macAddress)).ConfigureAwait(false); // Get magic packet byte array based on MAC Address
-                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                await Task.Run(() =>
                 {
-                    await _client.SendAsync(magicPacket, magicPacket.Length, ep).ConfigureAwait(false); // Broadcast magic packet
-                }
+                    byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
+                    foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
+                    {
+                        lock (_client) // Obtain lock for thread safety
+                        {
+                            _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
+                        }
+                    }
+                }).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
