@@ -46,6 +46,7 @@ namespace WOLtool
             try
             {
                 macParam = Regex.Replace(macParam, "[. : -]", ""); // Remove chars . - : from string (common in mac address format)
+                if (macParam.Length != 12) throw new ArgumentException("Invalid MAC Address Length! Must be 12 hexadecimal characters.");
                 byte[] macBytes = new byte[6];
                 for (int i = 0; i < 6; i++)
                 {
@@ -70,7 +71,7 @@ namespace WOLtool
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error building magic packet. Please verify MAC Address is entered correctly: {ex}");
+                throw new WakeOnLanException("Error building magic packet. Please verify MAC Address is entered correctly.", ex);
             }
         }
 
@@ -92,6 +93,23 @@ namespace WOLtool
             }
 
             _disposed = true;
+        }
+    }
+
+    public class WakeOnLanException : Exception
+    {
+        public WakeOnLanException()
+        {
+        }
+
+        public WakeOnLanException(string message)
+            : base(message)
+        {
+        }
+
+        public WakeOnLanException(string message, Exception inner)
+            : base(message, inner)
+        {
         }
     }
 }
