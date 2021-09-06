@@ -6,7 +6,7 @@ using System.IO;
 
 namespace WOLtool
 {
-    public class WOL : IDisposable
+    public class WakeOnLan : IDisposable
     {
         private bool _disposed = false;
         private readonly Socket _sock;
@@ -15,7 +15,7 @@ namespace WOLtool
             new IPEndPoint(IPAddress.Broadcast, 7), // Common WOL Port
             new IPEndPoint(IPAddress.Broadcast, 9) // Common WOL Port
         };
-        public WOL()
+        public WakeOnLan()
         {
             _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
             {
@@ -23,55 +23,43 @@ namespace WOLtool
             };
         }
 
-        public int Send(string macParam)
+        public void Send(string macAddress)
         {
             try
             {
-                byte[] magicPacket = BuildMagicPacket(macParam); // Get magic packet byte array based on MAC Address
-                foreach (var ep in _endpoints) // Send to all WOL Endpoints
+                byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    _sock.SendTo(magicPacket, ep); // Transmit magic packet
+                    _sock.SendTo(magicPacket, ep); // Broadcast magic packet
                 }
-                Console.WriteLine($"{macParam} [OK]");
-                return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"{macParam} [FAIL] {ex}");
-                return -1;
+                throw new WakeOnLanException("ERROR broadcasting WakeOnLan Magic Packet.", ex);
             }
         }
-        private static byte[] BuildMagicPacket(string macParam) // MacAddress in any standard HEX format
+
+        private static byte[] BuildMagicPacket(string macAddress)
         {
-            try
+            macAddress = Regex.Replace(macAddress, "[. : -]", "");
+            if (macAddress.Length != 12) throw new ArgumentException("Invalid MAC Address Length! Must be 12 hexadecimal characters.");
+            byte[] macBytes = new byte[6];
+            for (int i = 0; i < 6; i++)
             {
-                macParam = Regex.Replace(macParam, "[. : -]", ""); // Remove chars . - : from string (common in mac address format)
-                if (macParam.Length != 12) throw new ArgumentException("Invalid MAC Address Length! Must be 12 hexadecimal characters.");
-                byte[] macBytes = new byte[6];
+                macBytes[i] = Convert.ToByte(macAddress.Substring(i * 2, 2), 16);
+            }
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
                 for (int i = 0; i < 6; i++)
                 {
-                    macBytes[i] = Convert.ToByte(macParam.Substring(i * 2, 2), 16);
+                    bw.Write((byte)0xff);
                 }
-
-                using (MemoryStream ms = new MemoryStream())
+                for (int i = 0; i < 16; i++)
                 {
-                    using (BinaryWriter bw = new BinaryWriter(ms))
-                    {
-                        for (int i = 0; i < 6; i++)  //First 6 times 0xff
-                        {
-                            bw.Write((byte)0xff);
-                        }
-                        for (int i = 0; i < 16; i++) // then 16 times MacAddress
-                        {
-                            bw.Write(macBytes);
-                        }
-                    }
-                    return ms.ToArray(); // return 102 bytes magic packet
+                    bw.Write(macBytes);
                 }
-            }
-            catch (Exception ex)
-            {
-                throw new WakeOnLanException("Error building magic packet. Please verify MAC Address is entered correctly.", ex);
+                return ms.ToArray();
             }
         }
 
