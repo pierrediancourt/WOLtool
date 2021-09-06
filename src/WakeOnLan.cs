@@ -9,7 +9,7 @@ namespace WOLtool
 {
     public class WakeOnLan : IDisposable
     {
-        private readonly UdpClient _client;
+        private readonly Socket _sock;
         private static readonly IPEndPoint[] _endpoints = new IPEndPoint[]
         {
             new IPEndPoint(IPAddress.Broadcast, 7), // echo
@@ -18,7 +18,7 @@ namespace WOLtool
 
         public WakeOnLan()
         {
-            _client = new UdpClient(AddressFamily.InterNetwork)
+            _sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp)
             {
                 EnableBroadcast = true // Enable broadcast, required for macOS compatibility
             };
@@ -32,10 +32,7 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    lock (_client) // Obtain lock for thread safety
-                    {
-                        _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
-                    }
+                    _sock.SendTo(magicPacket, ep); // Broadcast magic packet
                 }
             }
             catch (Exception ex)
@@ -50,10 +47,7 @@ namespace WOLtool
                 byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    lock (_client) // Obtain lock for thread safety
-                    {
-                        _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
-                    }
+                    _sock.SendTo(magicPacket, ep); // Broadcast magic packet
                 }
             }
             catch (Exception ex)
@@ -72,10 +66,7 @@ namespace WOLtool
                     byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
                     foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                     {
-                        lock (_client) // Obtain lock for thread safety
-                        {
-                            _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
-                        }
+                        _sock.SendTo(magicPacket, ep); // Broadcast magic packet
                     }
                 }).ConfigureAwait(false);
             }
@@ -93,10 +84,7 @@ namespace WOLtool
                     byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
                     foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                     {
-                        lock (_client) // Obtain lock for thread safety
-                        {
-                            _client.Send(magicPacket, magicPacket.Length, ep); // Broadcast magic packet
-                        }
+                        _sock.SendTo(magicPacket, ep); // Broadcast magic packet
                     }
                 }).ConfigureAwait(false);
             }
@@ -139,7 +127,7 @@ namespace WOLtool
             if (disposing)
             {
                 // Dispose managed state (managed objects).
-                _client?.Dispose();
+                _sock?.Dispose();
             }
 
             _disposed = true;
