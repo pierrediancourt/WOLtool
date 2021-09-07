@@ -60,15 +60,12 @@ namespace WOLtool
         {
             try
             {
-                await Task.Run(() =>
+                var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
+                byte[] magicPacket = await BuildMagicPacketAsync(macParse); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
-                    byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
-                    foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
-                    {
-                        _sock.SendTo(magicPacket, ep); // Broadcast magic packet
-                    }
-                }).ConfigureAwait(false);
+                    await _sock.SendToAsync(magicPacket, SocketFlags.None, ep); // Broadcast magic packet
+                }
             }
             catch (Exception ex)
             {
@@ -79,14 +76,11 @@ namespace WOLtool
         {
             try
             {
-                await Task.Run(() =>
+                byte[] magicPacket = await BuildMagicPacketAsync(macAddress); // Get magic packet byte array based on MAC Address
+                foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
-                    byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
-                    foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
-                    {
-                        _sock.SendTo(magicPacket, ep); // Broadcast magic packet
-                    }
-                }).ConfigureAwait(false);
+                    await _sock.SendToAsync(magicPacket, SocketFlags.None, ep); // Broadcast magic packet
+                }
             }
             catch (Exception ex)
             {
@@ -98,15 +92,24 @@ namespace WOLtool
         {
             byte[] macBytes = macAddress.GetAddressBytes(); // Convert MAC Address to array of bytes
             using (var ms = new MemoryStream())
-            using (var bw = new BinaryWriter(ms))
             {
-                for (int i = 0; i < 6; i++) // 6 times 0xFF
-                {
-                    bw.Write((byte)0xff);
-                }
+                ms.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }); // 6 times 0xFF
                 for (int i = 0; i < 16; i++) // 16 times MAC Address
                 {
-                    bw.Write(macBytes);
+                    ms.Write(macBytes);
+                }
+                return ms.ToArray(); // 102 Byte Magic Packet
+            }
+        }
+        private async static Task<byte[]> BuildMagicPacketAsync(PhysicalAddress macAddress)
+        {
+            byte[] macBytes = macAddress.GetAddressBytes(); // Convert MAC Address to array of bytes
+            using (var ms = new MemoryStream())
+            {
+                await ms.WriteAsync(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }); // 6 times 0xFF
+                for (int i = 0; i < 16; i++) // 16 times MAC Address
+                {
+                    await ms.WriteAsync(macBytes);
                 }
                 return ms.ToArray(); // 102 Byte Magic Packet
             }
