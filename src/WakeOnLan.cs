@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 
@@ -61,7 +60,7 @@ namespace WOLtool
             try
             {
                 var macParse = PhysicalAddress.Parse(macAddress); // Parse string value
-                byte[] magicPacket = await BuildMagicPacketAsync(macParse); // Get magic packet byte array based on MAC Address
+                byte[] magicPacket = BuildMagicPacket(macParse); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
                     await _sock.SendToAsync(magicPacket, SocketFlags.None, ep); // Broadcast magic packet
@@ -76,7 +75,7 @@ namespace WOLtool
         {
             try
             {
-                byte[] magicPacket = await BuildMagicPacketAsync(macAddress); // Get magic packet byte array based on MAC Address
+                byte[] magicPacket = BuildMagicPacket(macAddress); // Get magic packet byte array based on MAC Address
                 foreach (var ep in _endpoints) // Broadcast to *all* WOL Endpoints
                 {
                     await _sock.SendToAsync(magicPacket, SocketFlags.None, ep); // Broadcast magic packet
@@ -88,31 +87,19 @@ namespace WOLtool
             }
         }
 
-        private static byte[] BuildMagicPacket(PhysicalAddress macAddress)
+        public static byte[] BuildMagicPacket(PhysicalAddress macAddress)
         {
-            byte[] macBytes = macAddress.GetAddressBytes(); // Convert MAC Address to array of bytes
-            using (var ms = new MemoryStream())
+            byte[] macBytes = macAddress.GetAddressBytes(); // Convert 48 bit MAC Address to array of bytes
+            byte[] magicPacket = new byte[102];
+            for (int i = 0; i < 6; i++) // 6 times 0xFF
             {
-                ms.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }); // 6 times 0xFF
-                for (int i = 0; i < 16; i++) // 16 times MAC Address
-                {
-                    ms.Write(macBytes);
-                }
-                return ms.ToArray(); // 102 Byte Magic Packet
+                magicPacket[i] = 0xFF;
             }
-        }
-        private async static Task<byte[]> BuildMagicPacketAsync(PhysicalAddress macAddress)
-        {
-            byte[] macBytes = macAddress.GetAddressBytes(); // Convert MAC Address to array of bytes
-            using (var ms = new MemoryStream())
+            for (int i = 6; i < 102; i += 6) // 16 times MAC Address
             {
-                await ms.WriteAsync(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }); // 6 times 0xFF
-                for (int i = 0; i < 16; i++) // 16 times MAC Address
-                {
-                    await ms.WriteAsync(macBytes);
-                }
-                return ms.ToArray(); // 102 Byte Magic Packet
+                Buffer.BlockCopy(macBytes, 0, magicPacket, i, 6);
             }
+            return magicPacket; // 102 Byte Magic Packet
         }
 
         // Public implementation of Dispose pattern callable by consumers.
