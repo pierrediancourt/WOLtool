@@ -87,7 +87,7 @@ namespace WOLtool
             }
         }
 
-        public static byte[] BuildMagicPacket(PhysicalAddress macAddress)
+        private static byte[] BuildMagicPacket(PhysicalAddress macAddress)
         {
             byte[] macBytes = macAddress.GetAddressBytes(); // Convert 48 bit MAC Address to array of bytes
             byte[] magicPacket = new byte[102];
